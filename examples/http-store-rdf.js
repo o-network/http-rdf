@@ -69,10 +69,10 @@ const store = new LayerStore({
   layers: [
     handleXSS,
     handleACL, // ACL should be before anything internal
+    getACLResponseBase,
     handleFile,
     new RDFStore(rdfStoreOptions),
     getContentTypeResponse,
-    getACLResponseBase,
     new FSStore(fsStoreOptions)
   ]
 });
