@@ -3,8 +3,8 @@ import handleMutate from "./mutate";
 import handlePatch from "./patch";
 import { Request, Response } from "@opennetwork/http-representation";
 import { RDFStoreOptions } from "../options";
+import { Fetcher } from "@opennetwork/http-store";
 
-export type Fetcher = (request: Request) => Promise<Response>;
 export type MethodHandler = (request: Request, options: RDFStoreOptions, fetch: Fetcher) => Promise<Response>;
 
 export {

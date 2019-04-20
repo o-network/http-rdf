@@ -1,7 +1,7 @@
 import { Request, Response } from "@opennetwork/http-representation";
 import { RDFStoreOptions } from "../options";
 import { RDF_MIME_TYPES } from "../mime-types";
-import isAccepted, { isOneOfAccepted } from "../is-accepted";
+import isAccepted from "../is-accepted";
 import { graph, parse, serialize } from "rdflib";
 import { preferredMediaTypes } from "../media-type";
 
@@ -10,10 +10,6 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
   const requestedType = preferredMediaTypes(request.headers.get("Accept"))[0];
   const possibleRDFType = preferredMediaTypes(request.headers.get("Accept"), RDF_MIME_TYPES)[0];
   const isDataBrowserPossible = requestedType && requestedType.includes("text/html") && options.getDataBrowser;
-
-  if (isDataBrowserPossible) {
-    return options.getDataBrowser(request, undefined);
-  }
 
   const currentResource = await fetch(
     new Request(
@@ -29,6 +25,17 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
     return currentResource;
   }
 
+  const contentType = (currentResource.headers.get("Content-Type") || "").split(";")[0].trim();
+
+  if (preferredMediaTypes(contentType, ["text/html"])[0]) {
+    // The content is already html, so don't try and do anything with it
+    return currentResource;
+  }
+
+  if (isDataBrowserPossible) {
+    return options.getDataBrowser(request, undefined);
+  }
+
   // Redirect for browser because of content negotiation
   if (currentResource.headers.get("Content-Location")) {
     return new Response(
@@ -42,14 +49,12 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
     );
   }
 
-  if (isAccepted(request.headers, request.headers.get("Content-Type"))) {
-    console.log("Early 1");
+  if (isAccepted(request.headers, contentType)) {
     // No need to do any more parsing
     return currentResource;
   }
 
   if (possibleRDFType !== requestedType) {
-    console.log("Early 2", currentResource.headers.getAll("Content-Type"));
     // No need to do any more parsing
     return currentResource;
   }

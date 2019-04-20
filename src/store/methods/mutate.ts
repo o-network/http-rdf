@@ -20,9 +20,20 @@ For containers we want to wrap it in a form-data request as we will create a new
 add our content to the metadata file
  */
 async function handleContainerPOST(request: Request, options: RDFStoreOptions, fetch: (request: Request) => Promise<Response>): Promise<Response> {
-  const url = new URL(
-    await options.findAvailablePOSTUrl(request.url)
-  );
+  if (!options.getContentLocation) {
+    return new Response(
+      undefined,
+      {
+        status: 501, // Not implemented
+        headers: {
+          Warning: "199 - Creating a new container is not currently implemented"
+        }
+      }
+    );
+  }
+
+  const contentLocation = await options.getContentLocation(request);
+  const url = new URL(contentLocation);
 
   // We're wanting to create this file as a container
   const metaSuffix = options.metaSuffix || ".meta";
