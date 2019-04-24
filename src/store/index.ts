@@ -1,11 +1,12 @@
 import { PartialResponse, Request, Response } from "@opennetwork/http-representation";
-import { Store, Fetcher } from "@opennetwork/http-store";
+import { Store } from "@opennetwork/http-store";
 import { RDFStoreOptions } from "./options";
 import { METHODS, MethodHandler, handleMutate } from "./methods";
 import appendLinks from "./append-links";
 import isType, { isOneOfType } from "./is-type";
-import isAccepted, { isOneOfAccepted } from "./is-accepted";
+import { isOneOfAccepted } from "./is-accepted";
 import { RDF_MIME_TYPES } from "./mime-types";
+import { preferredMediaTypes } from "./media-type";
 
 function isMutationMethod(methodUpper: string) {
   return ["PUT", "POST", "DELETE"].indexOf(methodUpper) > -1;
@@ -26,30 +27,31 @@ export class RDFStore implements Store {
     this.options = options;
   }
 
-  static isRDFRequest(request: Request, dataBrowser: boolean): boolean {
-    if (isOneOfType(request.headers, RDF_MIME_TYPES) || isOneOfType(request.headers, ["application/sparql-update", "text/n3"])) {
+  static isRDFRequest(request: Request): boolean {
+    const requestedType = preferredMediaTypes(request.headers.get("Accept"))[0];
+    if (!requestedType || requestedType === "*/*") {
+      return false;
+    }
+    if (isMutationMethod(request.method) && (isOneOfType(request.headers, RDF_MIME_TYPES) || isOneOfType(request.headers, ["application/sparql-update", "text/n3"]))) {
       return true;
     }
-    if (isType(request.headers, "multipart/form-data")) {
+    if (request.method.toUpperCase() === "POST" && isType(request.headers, "multipart/form-data")) {
       return true;
     }
     // OPTIONS is handled via partial response
     if (!["GET", "HEAD"].includes(request.method.toUpperCase())) {
       return false;
     }
-    if (dataBrowser && isAccepted(request.headers, "text/html")) {
-      return true;
-    }
-    return isOneOfAccepted(request.headers, RDF_MIME_TYPES);
+    return isOneOfAccepted(requestedType, RDF_MIME_TYPES);
   }
 
-  private handle(request: Request, options: RDFStoreOptions = undefined): Promise<Response> {
+  private async handle(request: Request, options: RDFStoreOptions = undefined): Promise<Response> {
     const handler: MethodHandler = getHandler(request.method);
-    if (!handler) {
+    if (!RDFStore.isRDFRequest(request)) {
+      // We're not going to handle it, return a partial response in fetch
       return undefined;
     }
-    if (!RDFStore.isRDFRequest(request, !!this.options.getDataBrowser)) {
-      // We're not going to handle it, return a partial response in fetch
+    if (!handler) {
       return undefined;
     }
     // When we call an external fetch, pass this fetch as the new fetch, anything invoked inside

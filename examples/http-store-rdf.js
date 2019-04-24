@@ -1,6 +1,5 @@
-import { FSStore, LayerStore, getContentLocation as getContentLocationFS, getPath } from "@opennetwork/http-store";
+import { FSStore, LayerStore, getContentLocation as getContentLocationFS } from "@opennetwork/http-store";
 import { fromRequest, sendResponse } from "@opennetwork/http-representation-node";
-import { Response } from "@opennetwork/http-representation";
 import http from "http";
 import fs from "fs";
 import rimraf from "rimraf";
@@ -15,6 +14,9 @@ import handleXSS from "./util/handle-xss";
 import handleFile from "./util/handle-file";
 import handleACL from "./util/handle-acl";
 import { origin, port } from "./origin";
+import handleDataBrowser from "./util/handle-data-browser";
+import handleEarlyAccepted from "./util/handle-early-accepted";
+import vary from "./util/vary";
 
 ACLCheck.configureLogger(() => {});
 
@@ -39,37 +41,17 @@ const rdfStoreOptions = {
   serverUri: origin,
   metaSuffix: ".meta",
   aclSuffix: ".acl",
-  getDataBrowser: async (request) => {
-    const dataBrowserPath = "/static/databrowser.html";
-    const dataBrowserUrl = new URL(dataBrowserPath, origin).toString();
-    const path = await getPath(dataBrowserUrl, fsStoreOptions);
-    const headers = {
-      "Content-Type": "text/html; charset=utf-8"
-    };
-    if (new URL(request.url).pathname !== dataBrowserPath) {
-      headers["Content-Location"] = dataBrowserUrl;
-    }
-    return new Response(
-      fs.createReadStream(
-        path,
-        {
-          encoding: "utf-8"
-        }
-      ),
-      {
-        status: 200,
-        headers
-      }
-    );
-  },
   getContentLocation: (request) => getContentLocationFS(request, fsStoreOptions)
 };
 
 const store = new LayerStore({
   layers: [
     handleXSS,
+    vary,
     handleACL, // ACL should be before anything internal
     getACLResponseBase,
+    handleDataBrowser(fsStoreOptions),
+    handleEarlyAccepted,
     handleFile,
     new RDFStore(rdfStoreOptions),
     getContentTypeResponse,
@@ -80,8 +62,12 @@ const store = new LayerStore({
 async function handle(initialRequest, initialResponse) {
   const request = fromRequest(initialRequest, origin);
 
+  const builder = await store.builder(request);
+  const response = await builder.build();
+  console.log(response, builder.responses);
+
   return sendResponse(
-    await store.fetch(request),
+    response,
     initialRequest,
     initialResponse
   );
