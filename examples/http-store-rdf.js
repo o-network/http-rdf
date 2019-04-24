@@ -64,7 +64,7 @@ async function handle(initialRequest, initialResponse) {
 
   const builder = await store.builder(request);
   const response = await builder.build();
-  console.log(response, builder.responses);
+  // console.log(response, builder.responses);
 
   return sendResponse(
     response,

@@ -1,9 +1,10 @@
-import { Request, Response } from "@opennetwork/http-representation";
+import { Request, Response, ResponseBuilder, Headers } from "@opennetwork/http-representation";
 import { origin } from "../origin";
 import { preferredMediaTypes } from "../../dist/store/media-type";
 import getPath from "@opennetwork/http-store/dist/fs-store/get-path";
 import fs from "fs";
 import { RDF_MIME_TYPES } from "../../dist/store/mime-types";
+import Cheerio from "cheerio";
 
 export default (fsStoreOptions) => {
   return async function handleDataBrowser(request, { fetchNext }) {
@@ -55,30 +56,95 @@ export default (fsStoreOptions) => {
     const dataBrowserPath = "/static/databrowser.html";
     const dataBrowserUrl = new URL(dataBrowserPath, origin).toString();
     const path = await getPath(dataBrowserUrl, fsStoreOptions);
-    const headers = {
+
+
+    const builder = new ResponseBuilder();
+
+    builder.withHeaders({
       "Content-Type": "text/html; charset=utf-8"
-    };
+    });
+
     if (new URL(request.url).pathname !== dataBrowserPath) {
-      headers["Content-Location"] = dataBrowserUrl;
+      builder.withHeaders({
+        "Content-Location": dataBrowserUrl
+      });
     }
 
-    let body;
+    if (request.method.toUpperCase() !== "GET") {
+      builder.with(new Response(undefined, { status: 200 }));
+      return builder.build();
+    }
 
-    if (request.method.toUpperCase() === "GET") {
-      body = fs.createReadStream(
-        path,
-        {
-          encoding: "utf-8"
+    const givenHeadersLD = new Headers(request.headers);
+    givenHeadersLD.set("Accept", "application/ld+json");
+
+    const givenHeadersTurtle = new Headers(request.headers);
+    givenHeadersTurtle.set("Accept", "text/turtle");
+
+    const givenHeaderN3 = new Headers(request.headers);
+    givenHeaderN3.set("Accept", "text/n3");
+
+    const [html, resourceLD, resourceTurtle, resourceN3] = await Promise.all([
+      new Promise(
+        (resolve, reject) => {
+          fs.readFile(
+            path,
+            {
+              encoding: "utf-8"
+            },
+            (error, data) => error ? reject(error) : resolve(data)
+          )
         }
-      );
-    }
+      ),
+      fetchNext(
+        new Request(
+          request.url,
+          {
+            method: "GET",
+            headers: givenHeadersLD
+          }
+        )
+      )
+        .then(response => response.text()),
+      fetchNext(
+        new Request(
+          request.url,
+          {
+            method: "GET",
+            headers: givenHeadersTurtle
+          }
+        )
+      )
+        .then(response => response.text()),
+      fetchNext(
+        new Request(
+          request.url,
+          {
+            method: "GET",
+            headers: givenHeaderN3
+          }
+        )
+      )
+        .then(response => response.text())
+    ]);
 
-    return new Response(
-      body,
+    // Inject data here so that HTML has full content
+    const $ = Cheerio.load(html);
+    $("body").append(`<script type="application/ld+json">${resourceLD}</script>`);
+    $("body").append(`<script type="text/turtle">${resourceTurtle}</script>`);
+    $("body").append(`<script type="text/n3">${resourceN3}</script>`);
+    const htmlWithLD = $.html();
+
+    const headers = (await builder.build()).headers;
+
+    builder.with(new Response(
+      htmlWithLD,
       {
         status: 200,
         headers
       }
-    );
+    ));
+
+    return builder.build();
   };
 }

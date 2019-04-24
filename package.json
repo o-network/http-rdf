@@ -29,6 +29,7 @@
     "@types/node": "^11.13.4",
     "@types/rdflib": "^0.17.1",
     "bootstrap": "^3.3.7",
+    "cheerio": "^1.0.0-rc.3",
     "esm": "^3.2.22",
     "fs-extra": "^7.0.1",
     "mashlib": "^0.7.18",

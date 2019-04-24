@@ -3,7 +3,7 @@ import { RDFStoreOptions } from "../options";
 import { RDF_MIME_TYPES } from "../mime-types";
 import { graph, parse, serialize } from "rdflib";
 import { preferredMediaTypes } from "../media-type";
-import isAccepted from "../is-accepted";
+import { isOneOfAccepted } from "../is-accepted";
 
 async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (request: Request) => Promise<Response>): Promise<Response> {
 
@@ -11,6 +11,7 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
 
   // Data browser should be accepted _after_ the RDF type
   if (!possibleRDFType) {
+    console.log("No RDF type acceptable", request.headers);
     // We can't handle this
     return undefined;
   }
@@ -40,9 +41,9 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
 
   const contentType = (currentResource.headers.get("Content-Type") || "").split(";")[0].trim();
 
-  // If its already accepted, we don't need to translate it
-  if (!isAccepted(request.headers, contentType)) {
-    return currentResource;
+  // We can't do this translation
+  if (contentType && !isOneOfAccepted(contentType, RDF_MIME_TYPES)) {
+    console.log("Can't handle " + contentType);
   }
 
   // We already know they accept an RDF type from RDF store code

@@ -5,6 +5,6 @@ export function isOneOfAccepted(headers: Headers | string, types: Iterable<strin
   return preferredMediaTypes(typeof headers === "string" ? headers : headers.get("accept"), types).length > 0;
 }
 
-export default function isAccepted(headers: Headers, contentType: string): boolean {
+export default function isAccepted(headers: Headers | string, contentType: string): boolean {
   return isOneOfAccepted(headers, [contentType]);
 }
