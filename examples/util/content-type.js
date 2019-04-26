@@ -3,11 +3,11 @@ import { PartialResponse } from "@opennetwork/http-representation";
 
 export default function(request) {
   if (!["GET", "HEAD"].includes(request.method.toUpperCase())) {
-    return new PartialResponse();
+    return undefined;
   }
-  const contentType = lookup(request.url);
+  const contentType = lookup(new URL(request.url).pathname);
   if (!contentType) {
-    return new PartialResponse();
+    return undefined;
   }
   return new PartialResponse(
     undefined,

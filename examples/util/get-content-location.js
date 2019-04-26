@@ -76,7 +76,13 @@ export default async function getContentLocation(request, getPath) {
 
   const baseName = basename(path, extname(path));
 
-  if (isPathDirectory) {
+  const headers = {
+    accept: request.headers.has("accept") ? request.headers.getAll("accept").join(",") : undefined
+  };
+
+  const negotiator = new Negotiator({ headers });
+
+  if (isPathDirectory && negotiator.mediaType(["text/html"])) {
     const indexPath = `${path.replace(/\/$/, "")}/index.html`;
     const indexStat = await stat(indexPath);
     if (!(indexStat && indexStat.isFile())) {
@@ -103,8 +109,11 @@ export default async function getContentLocation(request, getPath) {
     .filter(file => file.name.replace(magicExtensionRegex, "") === baseName)
     .map(file => file.name);
 
-  if (matching.length === 0) {
-    return undefined;
+  if (isPathDirectory && matching.length === 0) {
+    if (!url.pathname.endsWith("/")) {
+      url.pathname += "/";
+    }
+    return url.toString();
   }
 
   if (matching.length === 1) {
@@ -113,10 +122,6 @@ export default async function getContentLocation(request, getPath) {
     return url.toString();
   }
 
-  const headers = {
-    accept: request.headers.has("accept") ? request.headers.getAll("accept").join(",") : undefined
-  };
-
   const matchingWithContentType = matching
     .map(file => [
       file,
@@ -124,8 +129,6 @@ export default async function getContentLocation(request, getPath) {
     ]);
 
   const contentTypes = matchingWithContentType.map(values => values[1]);
-
-  const negotiator = new Negotiator({ headers });
   const preferredContentType = negotiator.mediaTypes(contentTypes);
 
   if (!preferredContentType) {
@@ -137,6 +140,11 @@ export default async function getContentLocation(request, getPath) {
     .find(value => value[1] === preferredContentType);
 
   const toUse = matched ? matched[0] : matching[0];
+
+  if (!toUse) {
+    return undefined;
+  }
+
   url.pathname += `$${extname(toUse)}`;
   return url.toString();
 };

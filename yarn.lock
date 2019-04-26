@@ -35,10 +35,10 @@
   resolved "https://registry.npmjs.org/@opennetwork/http-representation/-/http-representation-2.0.24.tgz#0d3eeb8ab76aad3936c4439c65556fc8e4077a2a"
   integrity sha512-0Lzx1bTvnZCJAOgyZGsTPeJyNI3mymfdw8/9MnxpmVIBNITEzfVhVPQTKOowl4ZnvRIuQcBS0ouzMgcqjLI3fA==
 
-"@opennetwork/http-store@^3.0.4":
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/@opennetwork/http-store/-/http-store-3.0.4.tgz#4e7a7cd717a8cc11028bfd70d40a330eaa55b7a6"
-  integrity sha512-5X8+wUpavSBVAJKz4AhNVf21+DDpfFaFkwWNvbZ9UiMhV2oUk1AqAJ7N8+2Z+60s3rRPhRXvJpquxPG3rqPBOQ==
+"@opennetwork/http-store@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.npmjs.org/@opennetwork/http-store/-/http-store-4.0.0.tgz#213808521a46b747db20d5b8e7cca1291194288f"
+  integrity sha512-NjO1t5nHncAF0O6Ch0LQRw1WELR3bE1MF7nWkMRvB19gwU1PkcBG98GLisaxgYsMAVHYLwanNwklTTjGHsHDCQ==
   dependencies:
     "@ungap/global-this" "^0.3.1"
     parse-multipart "^1.0.4"

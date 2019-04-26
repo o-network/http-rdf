@@ -31,7 +31,7 @@ export default (fsStoreOptions) => {
       new Request(
         request.url,
         {
-          method: "HEAD",
+          method: "GET",
           headers: request.headers
         }
       )
@@ -43,8 +43,12 @@ export default (fsStoreOptions) => {
 
     const contentType = (currentResource.headers.get("Content-Type") || "").split(";")[0].trim();
 
+    if (!contentType) {
+      return undefined;
+    }
+
     // If we can't handle it as RDF, then don't even try
-    if (!preferredMediaTypes(contentType || "*/*", RDF_MIME_TYPES)[0]) {
+    if (!preferredMediaTypes(contentType, RDF_MIME_TYPES)[0]) {
       return undefined;
     }
 
@@ -56,7 +60,6 @@ export default (fsStoreOptions) => {
     const dataBrowserPath = "/static/databrowser.html";
     const dataBrowserUrl = new URL(dataBrowserPath, origin).toString();
     const path = await getPath(dataBrowserUrl, fsStoreOptions);
-
 
     const builder = new ResponseBuilder();
 

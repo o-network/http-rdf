@@ -41,15 +41,48 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
 
   const contentType = (currentResource.headers.get("Content-Type") || "").split(";")[0].trim();
 
-  // We can't do this translation
   if (contentType && !isOneOfAccepted(contentType, RDF_MIME_TYPES)) {
-    console.log("Can't handle " + contentType);
+    return currentResource;
   }
 
   // We already know they accept an RDF type from RDF store code
   const currentResourceText = await currentResource.text();
 
   const resourceGraph = graph();
+
+  if (options.metaSuffix) {
+    const metaUrl = new URL(request.url);
+    metaUrl.pathname += options.metaSuffix;
+    metaUrl.hash = undefined;
+    metaUrl.search = undefined;
+    const metaResource = await fetch(
+      new Request(
+        metaUrl.toString(),
+        {
+          headers: {
+            "Accept": "text/turtle"
+          }
+        }
+      )
+    )
+      .catch(() => undefined);
+
+    if (metaResource) {
+      const metaResourceText = await metaResource.text();
+
+      await new Promise(
+        (resolve, reject) => parse(
+          metaResourceText,
+          resourceGraph,
+          request.url,
+          (metaResource.headers.get("Content-Type") || "text/turtle").split(";")[0].trim(),
+          (error) => error ? reject(error) : resolve()
+        )
+      )
+        .catch(() => {});
+    }
+
+  }
 
   await new Promise(
     (resolve, reject) => parse(
@@ -60,6 +93,7 @@ async function handleMethod(request: Request, options: RDFStoreOptions, fetch: (
       (error) => error ? reject(error) : resolve()
     )
   );
+
 
   const body = await new Promise(
     (resolve, reject) => serialize(
