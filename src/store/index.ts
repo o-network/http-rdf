@@ -72,7 +72,7 @@ export class RDFStore implements Store {
     };
     // Handle our request if we can, then add our headers
     const response = (await this.handle(request, newOptions)) || new PartialResponse();
-    appendLinks(request, response.headers, newOptions);
+    appendLinks(request, response.headers);
     return response;
   };
 
